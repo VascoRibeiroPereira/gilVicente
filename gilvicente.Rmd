@@ -1,0 +1,402 @@
+---
+title: "Fauna e Flora na obra de Gil Vicente"
+author: "Vasco Pereira"
+date: "1/16/2022"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+## Bibliotecas
+
+Bibliotecas necessárias para fazer o a pesquisa nos livros e fazer o tratamento de dados.
+
+```{r bibliotecas}
+
+## Bibliotecas em R utilizadas para a pesquisa dos termos e tratamento dos dados em tabelas
+
+library(pdfsearch)
+library(xlsx)
+library(dplyr)
+library(ggplot2)
+
+library(wordcloud)
+library(RColorBrewer)
+library(wordcloud2)
+
+```
+
+## Importação de Dados
+
+Localização dos livros.
+
+```{r livros, include=FALSE}
+
+## Localização dos livros no sistema de ficheiros (Com o novo código já não é necessário)
+
+# myFiles <- c("/livros/um.pdf", "/livros/dois.pdf", "/livros/tres.pdf")
+# ## setwd(paste0(getwd(), "/Desktop/GilVicente")) ## para correr manualmente no terminal
+# filesLoc <- paste0(getwd(), myFiles)
+
+```
+
+Lista completa a utilizar na pesquisa.
+
+```{r lista}
+
+## Importação da lista de termos a pesquisar nas obras
+
+myTable <- read.xlsx("lista.xlsx", "total")
+mylist <- as.vector(myTable$Lista) %>% tolower()# %>% unique()
+print(mylist)
+
+```
+
+## Pesquisa no Volume I
+
+```{r volI}
+
+## Listar todas as obras to primeiro Volume
+
+obras_1 <- list.files(paste0(getwd(),"/livros/tomo_1"), full.names = TRUE)
+
+## Pesquisa ciclica em todas as obras do volume com a função keyword_search da biblioteca pdfsearch
+
+volI.table <- tibble()
+
+for (i in 1:length(obras_1)) {
+
+        volI.temp <- keyword_search(obras_1[i], keyword = mylist, path = TRUE, 
+                             convert_sentence = FALSE)
+        volI.temp$obra <- list.files(paste0(getwd(),"/livros/tomo_1"))[i]
+        
+        volI.table <- bind_rows(volI.temp, volI.table)
+        
+}
+
+## Transformar as linhas de texto onde se encontra o termo em vector de caracteres (antes estava em lista, dificultando a sua visualização)
+
+volI.table$line_text <- unlist(volI.table$line_text)
+
+## Remoção da última coluna (tratava-se de tokens - palavras soltas - do texto que rodeia o termo encontrado)
+
+volI.table <- volI.table[,-5]
+
+## Ordenar por número de página utilizando a função arrange da biblioteca dplyr
+
+volI.table <- volI.table %>% arrange(obra, page_num)
+        
+```
+
+```{r refineI}
+
+## Refinar os resultados de acordo com a pesquisa
+
+listI <- strsplit(volI.table$line_text, "( )|(,)|(')") %>% lapply(tolower) ## separar os termos todos palavra a palavra
+
+volIVector <- as.logical()
+
+for (i in 1:nrow(volI.table)) { ## pesquisar o termo na frase detectada (termos pesquisam correspondencia que comece pela palavra mas acabe em variações para incluir os plurais. Isto significa que "passa" vai dar resultado falso positivo para "passagem", por exemplo)
+        
+        tmp <- isTRUE(grep(paste0("^", volI.table$keyword[i]), listI[[i]]) > 0) == TRUE
+        
+        volIVector <- c(volIVector, tmp)
+
+}
+
+volI.table <- volI.table[volIVector,]
+
+```
+
+
+### Termos encontrados
+
+```{r uniqueI}
+
+## Lista de termos encontrados no primeiro volume
+
+unique(volI.table$keyword)
+
+```
+
+### Tabela do Volume I
+
+```{r volItable}
+
+knitr::kable(volI.table)
+
+```
+
+### Tabela do Volume I - Por tipo
+
+```{r volItable_type}
+
+
+smallList <- gsub("\\$", "", tolower(myTable$Lista))
+
+volI.table$food_type <- NA
+
+for(i in 1:nrow(volI.table)) {
+        volI.table$food_type[i] <- myTable$type[grep(paste0("^", volI.table$keyword[i], "$"), 
+                          smallList)]
+        
+}
+
+volI.types <- volI.table[,c(1,6,5)]
+
+volI.types <- volI.types %>% 
+        group_by(food_type, obra) %>% 
+        arrange(obra, desc(food_type))
+
+write.xlsx(as.data.frame(volI.types), "volI_types.xlsx")
+
+```
+
+
+
+
+## Pesquisa no Volume II
+
+```{r volII}
+
+## Listar todas as obras to primeiro Volume
+
+obras_2 <- list.files(paste0(getwd(),"/livros/tomo_2"), full.names = TRUE)
+
+## Pesquisa ciclica em todas as obras do volume com a função keyword_search da biblioteca pdfsearch
+
+volII.table <- tibble()
+
+for (i in 1:length(obras_2)) {
+
+        volII.temp <- keyword_search(obras_2[i], keyword = mylist, path = TRUE, 
+                             convert_sentence = FALSE)
+        volII.temp$obra <- list.files(paste0(getwd(),"/livros/tomo_2"))[i]
+        
+        volII.table <- bind_rows(volII.temp, volII.table)
+        
+}
+
+## Transformar as linhas de texto onde se encontra o termo em vector de caracteres (antes estava em lista, dificultando a sua visualização)
+
+volII.table$line_text <- unlist(volII.table$line_text)
+
+## Remoção da última coluna (tratava-se de tokens - palavras soltas - do texto que rodeia o termo encontrado)
+
+volII.table <- volII.table[,-5]
+
+## Ordenar por número de página utilizando a função arrange da biblioteca dplyr
+
+volII.table <- volII.table %>% arrange(obra, page_num)
+        
+```
+
+```{r refineII}
+
+## Refinar os resultados de acordo com a pesquisa
+
+listII <- strsplit(volII.table$line_text, "( )|(,)|(')") %>% lapply(tolower) ## separar os termos todos palavra a palavra
+
+volIIVector <- as.logical()
+
+for (i in 1:nrow(volII.table)) { ## pesquisar o termo na frase detectada (termos pesquisam correspondencia que comece pela palavra mas acabe em variações para incluir os plurais. Isto significa que "passa" vai dar resultado falso positivo para "passagem", por exemplo)
+        
+        tmp <- isTRUE(grep(paste0("^", volII.table$keyword[i]), listII[[i]]) > 0) == TRUE
+        
+        volIIVector <- c(volIIVector, tmp)
+
+}
+
+volII.table <- volII.table[volIIVector,]
+
+```
+
+### Termos encontrados
+
+```{r uniqueII}
+
+## Lista de termos encontrados no segundo volume
+
+unique(volII.table$keyword)
+
+```
+
+### Tabela do Volume II
+
+```{r volIItable}
+
+knitr::kable(volII.table)
+
+```
+
+### Tabela do Volume II - Por tipo
+
+```{r volIItable_type}
+
+
+smallList <- gsub("\\$", "", tolower(myTable$Lista))
+
+volII.table$food_type <- NA
+
+for(i in 1:nrow(volII.table)) {
+        volII.table$food_type[i] <- myTable$type[grep(paste0("^", volII.table$keyword[i], "$"), 
+                          smallList)]
+        
+}
+
+volII.types <- volII.table[,c(1,6,5)]
+
+volII.types <- volII.types %>% 
+        group_by(food_type, obra) %>% 
+        arrange(obra, desc(food_type))
+
+write.xlsx(as.data.frame(volII.types), "volII_types.xlsx")
+
+```
+
+## Pesquisa no Volume III
+
+```{r volIII}
+
+## Listar todas as obras to primeiro Volume
+
+obras_3 <- list.files(paste0(getwd(),"/livros/tomo_3"), full.names = TRUE)
+
+## Pesquisa ciclica em todas as obras do volume com a função keyword_search da biblioteca pdfsearch
+
+volIII.table <- tibble()
+
+for (i in 1:length(obras_3)) {
+
+        volIII.temp <- keyword_search(obras_3[i], keyword = mylist, path = TRUE, 
+                             convert_sentence = FALSE)
+        volIII.temp$obra <- list.files(paste0(getwd(),"/livros/tomo_3"))[i]
+        
+        volIII.table <- bind_rows(volIII.temp, volIII.table)
+        
+}
+
+## Transformar as linhas de texto onde se encontra o termo em vector de caracteres (antes estava em lista, dificultando a sua visualização)
+
+volIII.table$line_text <- unlist(volIII.table$line_text)
+
+## Remoção da última coluna (tratava-se de tokens - palavras soltas - do texto que rodeia o termo encontrado)
+
+volIII.table <- volIII.table[,-5]
+
+## Ordenar por número de página utilizando a função arrange da biblioteca dplyr
+
+volIII.table <- volIII.table %>% arrange(obra, page_num)
+        
+```
+
+```{r refineIII}
+
+## Refinar os resultados de acordo com a pesquisa
+
+listIII <- strsplit(volIII.table$line_text, "( )|(,)|(')") %>% lapply(tolower) ## separar os termos todos palavra a palavra
+
+volIIIVector <- as.logical()
+
+for (i in 1:nrow(volIII.table)) { ## pesquisar o termo na frase detectada (termos pesquisam correspondencia que comece pela palavra mas acabe em variações para incluir os plurais. Isto significa que "passa" vai dar resultado falso positivo para "passagem", por exemplo)
+        
+        tmp <- isTRUE(grep(paste0("^", volIII.table$keyword[i]), listIII[[i]]) > 0) == TRUE
+        
+        volIIIVector <- c(volIIIVector, tmp)
+
+}
+
+volIII.table <- volIII.table[volIIIVector,]
+
+```
+
+### Termos encontrados
+
+```{r uniqueIII}
+
+## Lista de termos encontrados no terceiro volume
+
+unique(volIII.table$keyword)
+
+```
+
+### Tabela do Volume III
+
+```{r volIIItable}
+
+knitr::kable(volIII.table)
+
+```
+
+### Tabela do Volume III - Por tipo
+
+```{r volIIItable_type}
+
+
+smallList <- gsub("\\$", "", tolower(myTable$Lista))
+
+volIII.table$food_type <- NA
+
+for(i in 1:nrow(volIII.table)) {
+        volIII.table$food_type[i] <- myTable$type[grep(paste0("^", volIII.table$keyword[i], "$"), 
+                          smallList)]
+        
+}
+
+volIII.types <- volIII.table[,c(1,6,5)]
+
+volIII.types <- volIII.types %>% 
+        group_by(food_type, obra) %>% 
+        arrange(obra, desc(food_type))
+
+write.xlsx(as.data.frame(volIII.types), "volIII_types.xlsx")
+
+```
+
+
+# Representação Gráfica
+
+```{r garphTerms}
+
+completeTable <- bind_rows(volI.table, volII.table, volIII.table)
+
+completeTable %>% ggplot(aes(x = reorder(keyword, keyword,
+                                         function(x)-length(x)))) + 
+        geom_bar(aes(fill = obra)) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+        theme(legend.position = "bottom") +
+        xlab("Termos encontrados nas obras de Gil Vicente")
+        
+        
+```
+
+## Frequencia dos termos
+
+```{r tableTerms}
+
+freqTable <- as.data.frame(table(completeTable$keyword)) %>% arrange(desc(Freq))
+
+knitr::kable(freqTable)
+        
+        
+```
+
+## WordCloud
+
+Nuvem de palavras relativas a fauna/flora e gastronomia que mais são referidas na obra de Gil Vicente
+
+``` {r wordcloud}
+
+set.seed(1234) # for reproducibility 
+
+wordcloud(words = freqTable$Var1, freq = freqTable$Freq, min.freq = 1,
+          max.words=200,
+          random.order=FALSE,
+          rot.per=0.35,
+          colors=brewer.pal(8, "Dark2"))
+
+```
+
+
