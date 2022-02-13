@@ -401,7 +401,7 @@ g <- completeTable %>% ggplot(aes(x = reorder(keyword, keyword,
         theme(legend.position = "bottom") +
         xlab("Termos encontrados nas obras de Gil Vicente")
 
-jpeg(file = "grafico.jpeg", width = 8, height = 4, units = 'in', res = 300)
+jpeg(file = "grafico.jpeg", width = 15, height = 6, units = 'in', res = 300)
 g
 dev.off()
         
