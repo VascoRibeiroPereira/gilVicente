@@ -110,6 +110,17 @@ volI.table <- volI.table[volIVector,]
 
 ```
 
+```{r manualrefineI}
+
+## Refinar os resultados manualmente de acordo com o fornecido pelo Requerente
+
+vectorTBI <- c(1,16, 28, 41, 65, 67, 78, 94, 102, 121, 123, 124, 135, 139, 147, 151, 155, 158, 159, 183, 184,
+192, 197, 206, 210, 211, 214, 225, 227, 230, 233, 235, 236, 237, 256, 258, 260)
+
+volI.table <- volI.table[-vectorTBI,]
+
+```
+
 
 ### Termos encontrados
 
@@ -153,7 +164,6 @@ volI.types <- volI.types %>%
 write.xlsx(as.data.frame(volI.types), "volI_types.xlsx")
 
 ```
-
 
 
 
@@ -210,6 +220,18 @@ for (i in 1:nrow(volII.table)) { ## pesquisar o termo na frase detectada (termos
 }
 
 volII.table <- volII.table[volIIVector,]
+
+```
+
+```{r manualrefineII}
+
+## Refinar os resultados manualmente de acordo com o fornecido pelo Requerente
+
+vectorTBII <- c(1, 3, 9, 10, 11, 12, 15, 16, 17, 23, 28, 38, 43, 51, 52, 53, 54, 56, 72, 73, 78, 84, 100, 101, 111,
+112, 140, 144, 146, 148, 153, 154, 157, 158, 159, 171, 172, 173, 183, 185, 202, 213, 215, 219,
+232, 238, 241)
+
+volII.table <- volII.table[-vectorTBII,]
 
 ```
 
@@ -312,6 +334,16 @@ volIII.table <- volIII.table[volIIIVector,]
 
 ```
 
+```{r manualrefineIII}
+
+## Refinar os resultados manualmente de acordo com o fornecido pelo Requerente
+
+vectorTBIII <- c(1, 2, 4, 7, 14, 16, 21, 23)
+
+volIII.table <- volIII.table[-vectorTBIII,]
+
+```
+
 ### Termos encontrados
 
 ```{r uniqueIII}
@@ -362,12 +394,16 @@ write.xlsx(as.data.frame(volIII.types), "volIII_types.xlsx")
 
 completeTable <- bind_rows(volI.table, volII.table, volIII.table)
 
-completeTable %>% ggplot(aes(x = reorder(keyword, keyword,
+g <- completeTable %>% ggplot(aes(x = reorder(keyword, keyword,
                                          function(x)-length(x)))) + 
         geom_bar(aes(fill = obra)) +
         theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
         theme(legend.position = "bottom") +
         xlab("Termos encontrados nas obras de Gil Vicente")
+
+jpeg(file = "grafico.jpeg", width = 8, height = 4, units = 'in', res = 300)
+g
+dev.off()
         
         
 ```
